@@ -188,7 +188,7 @@ POSTGRES_PASSWORD: "secure_postgres_password"
 REDIS_PASSWORD: "secure_redis_password"
 
 # API Keys
-OPENAI_API_KEY: "your_openai_key"
+GEMINI_API_KEY: "your_gemini_key"
 JWT_SECRET: "your_jwt_secret"
 ENCRYPTION_KEY: "your_encryption_key"
 

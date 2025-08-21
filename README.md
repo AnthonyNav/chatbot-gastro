@@ -27,7 +27,7 @@ Un chatbot especializado en proporcionar información sobre enfermedades gastroi
 ### Backend
 - **Node.js** con Express y TypeScript
 - **PostgreSQL** con Prisma ORM
-- **OpenAI GPT-4** para procesamiento de lenguaje natural
+- **Google Gemini Pro** para procesamiento de lenguaje natural
 - **Winston** para logging
 - **Rate limiting** y seguridad robusta
 
@@ -36,7 +36,7 @@ Un chatbot especializado en proporcionar información sobre enfermedades gastroi
 - Node.js 18+ 
 - PostgreSQL 13+
 - npm o yarn
-- API Key de OpenAI
+- API Key de Google Gemini (gratuito)
 
 ## 🛠️ Instalación
 
@@ -99,8 +99,8 @@ npm run preview
 # Base de datos
 DATABASE_URL="postgresql://user:password@localhost:5432/gastro_chatbot"
 
-# OpenAI
-OPENAI_API_KEY="your-openai-key"
+# Google Gemini
+GEMINI_API_KEY="your-gemini-key"
 
 # Servidor
 PORT=5000
@@ -114,6 +114,31 @@ RATE_LIMIT_MAX_REQUESTS=100
 # CORS
 CORS_ORIGIN="http://localhost:3000"
 ```
+
+## 🤖 Integración con Google Gemini
+
+Este proyecto utiliza **Google Gemini Pro** como modelo de IA para el procesamiento de consultas médicas, ofreciendo las siguientes ventajas:
+
+### ✅ Ventajas de Gemini vs OpenAI
+- **Costo**: Gratuito hasta 15 solicitudes por minuto (60 por hora)
+- **Latencia**: Respuestas más rápidas en promedio
+- **Multimodal**: Soporte nativo para texto e imágenes
+- **Precisión**: Excelente rendimiento en tareas médicas
+- **Límites generosos**: 1 millón de tokens por minuto gratis
+
+### 🔑 Configuración de API Key
+1. Ve a [Google AI Studio](https://makersuite.google.com/app/apikey)
+2. Crea una nueva API Key
+3. Agrega la key a tu archivo `.env`:
+   ```bash
+   GEMINI_API_KEY=your_gemini_api_key_here
+   ```
+
+### 📊 Límites de la API Gratuita
+- **Requests por minuto**: 15
+- **Requests por día**: 1,500  
+- **Tokens por minuto**: 1,000,000
+- **Tokens por día**: 50,000,000
 
 ## 🗄️ Estructura de Base de Datos
 
@@ -251,7 +276,7 @@ Este proyecto está bajo la Licencia MIT - ver [LICENSE.md](LICENSE.md) para det
 ## 🙏 Reconocimientos
 
 - Comunidad médica por validación de contenido
-- OpenAI por tecnología de IA
+- Google AI por tecnología Gemini gratuita y eficiente
 - Contribuidores del proyecto open source
 
 ---

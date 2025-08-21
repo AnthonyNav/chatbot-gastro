@@ -1,4 +1,4 @@
-import OpenAI from 'openai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { logger, medicalLogger } from '../utils/logger';
 import { 
   ChatRequest, 
@@ -12,7 +12,7 @@ import { MedicalContentSanitizer, MedicalResponseFormatter } from '../utils/medi
 import { EmergencyError } from '../middleware/errorHandler';
 
 export class MedicalAIService {
-  private openai: OpenAI;
+  private genAI: GoogleGenerativeAI;
   private readonly model: string;
   private readonly maxTokens: number;
   private readonly temperature: number;
@@ -74,11 +74,9 @@ TONO: Profesional, empático, cálido pero serio cuando sea necesario.
 `;
 
   constructor() {
-    this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
+    this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
     
-    this.model = process.env.OPENAI_MODEL || 'gpt-4';
+    this.model = process.env.GEMINI_MODEL || 'gemini-pro';
     this.maxTokens = 800;
     this.temperature = 0.3; // Conservador para respuestas médicas
   }
@@ -110,8 +108,8 @@ TONO: Profesional, empático, cálido pero serio cuando sea necesario.
         emergencyKeywords: this.CRITICAL_EMERGENCY_KEYWORDS,
       };
 
-      // Llamar a OpenAI
-      const aiResponse = await this.callOpenAI(context);
+      // Llamar a Gemini
+      const aiResponse = await this.callGemini(context);
       
       // Verificar respuesta por seguridad médica
       const finalResponse = this.validateMedicalResponse(aiResponse);
@@ -209,55 +207,51 @@ TONO: Profesional, empático, cálido pero serio cuando sea necesario.
   }
 
   /**
-   * Llama a la API de OpenAI con el contexto médico
+   * Llama a la API de Google Gemini con el contexto médico
    */
-  private async callOpenAI(context: AIPromptContext): Promise<AIResponse> {
+  private async callGemini(context: AIPromptContext): Promise<AIResponse> {
     try {
-      const messages = [
-        {
-          role: 'system' as const,
-          content: this.MEDICAL_SYSTEM_PROMPT,
-        },
-        {
-          role: 'user' as const,
-          content: this.buildUserPrompt(context),
-        },
-      ];
+      const model = this.genAI.getGenerativeModel({ model: this.model });
 
-      const response = await this.openai.chat.completions.create({
-        model: this.model,
-        messages,
-        max_tokens: this.maxTokens,
-        temperature: this.temperature,
-        presence_penalty: 0.1,
-        frequency_penalty: 0.1,
+      // Construir el prompt completo combinando sistema y usuario
+      const fullPrompt = `${this.MEDICAL_SYSTEM_PROMPT}
+
+${this.buildUserPrompt(context)}`;
+
+      const result = await model.generateContent({
+        contents: [{ role: 'user', parts: [{ text: fullPrompt }] }],
+        generationConfig: {
+          temperature: this.temperature,
+          maxOutputTokens: this.maxTokens,
+        },
       });
 
-      const choice = response.choices[0];
+      const response = await result.response;
+      const content = response.text();
       
-      if (!choice?.message?.content) {
-        throw new Error('No response content from OpenAI');
+      if (!content) {
+        throw new Error('No response content from Gemini');
       }
 
       // Verificar si la IA detectó emergencia
-      const emergencyDetected = this.detectEmergency(choice.message.content);
+      const emergencyDetected = this.detectEmergency(content);
       
       return {
-        content: choice.message.content,
-        confidence: this.calculateConfidence(choice),
+        content: content,
+        confidence: this.calculateConfidence(response),
         emergencyDetected,
         symptomsIdentified: context.extractedSymptoms,
-        recommendedActions: this.extractRecommendations(choice.message.content),
+        recommendedActions: this.extractRecommendations(content),
         model: this.model,
         usage: {
-          promptTokens: response.usage?.prompt_tokens || 0,
-          completionTokens: response.usage?.completion_tokens || 0,
-          totalTokens: response.usage?.total_tokens || 0,
+          promptTokens: response.usageMetadata?.promptTokenCount || 0,
+          completionTokens: response.usageMetadata?.candidatesTokenCount || 0,
+          totalTokens: response.usageMetadata?.totalTokenCount || 0,
         },
       };
 
     } catch (error) {
-      logger.error('OpenAI API call failed:', error);
+      logger.error('Gemini API call failed:', error);
       throw new Error('AI service temporarily unavailable');
     }
   }
@@ -321,19 +315,23 @@ INSTRUCCIONES:
   }
 
   /**
-   * Calcula confianza basada en la respuesta de OpenAI
+   * Calcula confianza basada en la respuesta de Gemini
    */
-  private calculateConfidence(choice: any): number {
-    // Lógica simplificada de confianza
+  private calculateConfidence(response: any): number {
+    // Lógica simplificada de confianza para Gemini
     // En producción, esto sería más sofisticado
     const baseConfidence = 0.8;
     
-    if (choice.finish_reason === 'stop') {
+    // Gemini no tiene finish_reason como OpenAI, así que usamos otros criterios
+    const hasContent = response.text() && response.text().length > 50;
+    const hasUsageData = response.usageMetadata;
+    
+    if (hasContent && hasUsageData) {
       return baseConfidence;
-    } else if (choice.finish_reason === 'length') {
-      return baseConfidence * 0.9; // Respuesta truncada
+    } else if (hasContent) {
+      return baseConfidence * 0.9;
     } else {
-      return baseConfidence * 0.7; // Otras razones de finalización
+      return baseConfidence * 0.7;
     }
   }
 
