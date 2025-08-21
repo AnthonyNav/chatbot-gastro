@@ -1,0 +1,225 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enfermedades gastrointestinales
+model Disease {
+  id              Int      @id @default(autoincrement())
+  name            String   @unique
+  description     String
+  symptoms        String[] // Array de síntomas
+  causes          String[] // Array de causas
+  treatments      String[] // Array de tratamientos
+  severityLevel   String   // mild, moderate, severe, emergency
+  riskFactors     String[] // Factores de riesgo
+  prevention      String[] // Medidas preventivas
+  complications   String[] // Posibles complicaciones
+  
+  // Metadatos médicos
+  icdCode         String?  // Código ICD-10
+  category        String   // categoría médica
+  prevalence      String?  // prevalencia de la enfermedad
+  
+  // Sistema
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  isActive        Boolean  @default(true)
+  
+  // Relaciones
+  symptoms_rel    DiseaseSymptom[]
+  
+  @@map("diseases")
+}
+
+// Síntomas específicos
+model Symptom {
+  id              Int      @id @default(autoincrement())
+  name            String   @unique
+  description     String
+  severityIndicators String[] // Indicadores de gravedad
+  redFlags        String[] // Señales de alarma
+  bodyLocation    String[] // Ubicación en el cuerpo
+  duration        String?  // Duración típica
+  triggers        String[] // Desencadenantes comunes
+  
+  // Clasificación
+  category        String   // pain, digestive, systemic, etc.
+  urgencyLevel    String   // low, medium, high, emergency
+  
+  // Sistema
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  isActive        Boolean  @default(true)
+  
+  // Relaciones
+  diseases        DiseaseSymptom[]
+  
+  @@map("symptoms")
+}
+
+// Tabla de relación muchos a muchos entre diseases y symptoms
+model DiseaseSymptom {
+  id          Int     @id @default(autoincrement())
+  diseaseId   Int
+  symptomId   Int
+  frequency   String  // common, occasional, rare
+  severity    String  // mild, moderate, severe
+  
+  disease     Disease @relation(fields: [diseaseId], references: [id], onDelete: Cascade)
+  symptom     Symptom @relation(fields: [symptomId], references: [id], onDelete: Cascade)
+  
+  @@unique([diseaseId, symptomId])
+  @@map("disease_symptoms")
+}
+
+// Conversaciones del chatbot
+model Conversation {
+  id            String   @id @default(uuid())
+  sessionId     String   @unique
+  messages      Json[]   // Array de mensajes en formato JSON
+  userSymptoms  String[] // Síntomas mencionados por el usuario
+  suggestedDiseases String[] // Enfermedades sugeridas
+  riskLevel     String   @default("low") // low, medium, high, emergency
+  
+  // Análisis de la conversación
+  emergencyDetected Boolean @default(false)
+  medicalAdviceGiven Boolean @default(false)
+  satisfactionRating Int?   // 1-5 si el usuario califica
+  
+  // Metadatos
+  userAgent     String?
+  ipAddress     String?
+  language      String   @default("es")
+  
+  // Sistema
+  createdAt     DateTime @default(now())
+  lastActivity  DateTime @default(now())
+  isActive      Boolean  @default(true)
+  
+  // Relaciones
+  feedback      Feedback[]
+  
+  @@map("conversations")
+}
+
+// Feedback de usuarios
+model Feedback {
+  id             Int      @id @default(autoincrement())
+  conversationId String
+  rating         Int      // 1-5
+  comment        String?
+  category       String   // helpful, accuracy, interface, speed
+  
+  // Análisis específico
+  wasHelpful     Boolean
+  foundAnswer    Boolean
+  wouldRecommend Boolean?
+  
+  // Sistema
+  createdAt      DateTime @default(now())
+  
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  
+  @@map("feedback")
+}
+
+// Tratamientos y recomendaciones
+model Treatment {
+  id              Int      @id @default(autoincrement())
+  name            String
+  description     String
+  type            String   // medication, lifestyle, dietary, surgical
+  category        String   // otc, prescription, home_remedy, professional
+  
+  // Detalles del tratamiento
+  instructions    String[]
+  precautions     String[]
+  contraindications String[]
+  sideEffects     String[]
+  duration        String?
+  
+  // Información médica
+  activeIngredient String?
+  dosage          String?
+  frequency       String?
+  
+  // Aplicabilidad
+  conditions      String[] // Para qué condiciones aplica
+  ageRestrictions String?
+  pregnancySafety String?
+  
+  // Sistema
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  isActive        Boolean  @default(true)
+  
+  @@map("treatments")
+}
+
+// Información médica de emergencia
+model EmergencyInfo {
+  id              Int      @id @default(autoincrement())
+  title           String
+  description     String
+  warningSignals  String[] // Señales de alarma
+  immediateActions String[] // Acciones inmediatas
+  when911         String[] // Cuándo llamar emergencias
+  
+  // Contactos
+  emergencyNumbers Json    // Números de emergencia por región
+  hospitalContacts Json?   // Contactos de hospitales
+  
+  // Categorización
+  severity        String   // critical, urgent, moderate
+  category        String   // bleeding, pain, infection, etc.
+  
+  // Sistema
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  isActive        Boolean  @default(true)
+  
+  @@map("emergency_info")
+}
+
+// Log de actividades del sistema
+model ActivityLog {
+  id            Int      @id @default(autoincrement())
+  sessionId     String?
+  action        String   // message_sent, emergency_detected, feedback_given
+  details       Json?    // Detalles adicionales
+  userAgent     String?
+  ipAddress     String?
+  
+  // Análisis
+  responseTime  Int?     // Tiempo de respuesta en ms
+  aiModel       String?  // Modelo de IA utilizado
+  confidence    Float?   // Confianza de la respuesta IA
+  
+  // Sistema
+  timestamp     DateTime @default(now())
+  
+  @@map("activity_logs")
+}
+
+// Configuración del sistema
+model SystemConfig {
+  id            Int      @id @default(autoincrement())
+  key           String   @unique
+  value         Json
+  description   String?
+  category      String   // ai, security, features, limits
+  
+  // Sistema
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@map("system_config")
+}
