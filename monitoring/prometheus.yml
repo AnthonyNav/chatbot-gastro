@@ -1,0 +1,87 @@
+# Prometheus Configuration for GastroChatbot
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "rules/*.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 5s
+
+  # Node Exporter for system metrics
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 5s
+
+  # Backend API metrics
+  - job_name: 'gastro-backend'
+    static_configs:
+      - targets: ['backend:3001']
+    metrics_path: '/api/metrics'
+    scrape_interval: 10s
+    scrape_timeout: 5s
+    scheme: http
+    basic_auth:
+      username: 'prometheus'
+      password: 'monitoring_password'
+
+  # Frontend metrics (if available)
+  - job_name: 'gastro-frontend'
+    static_configs:
+      - targets: ['frontend:8080']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # PostgreSQL metrics
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+    scrape_interval: 10s
+
+  # Redis metrics
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+    scrape_interval: 10s
+
+  # Nginx metrics (if nginx-prometheus-exporter is used)
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['nginx-exporter:9113']
+    scrape_interval: 10s
+
+  # Docker metrics
+  - job_name: 'docker'
+    static_configs:
+      - targets: ['cadvisor:8080']
+    scrape_interval: 10s
+
+  # Medical compliance monitoring
+  - job_name: 'hipaa-compliance'
+    static_configs:
+      - targets: ['backend:3001']
+    metrics_path: '/api/compliance/metrics'
+    scrape_interval: 60s
+    scheme: http
+
+  # Application health checks
+  - job_name: 'health-checks'
+    static_configs:
+      - targets: 
+        - 'backend:3001'
+        - 'frontend:8080'
+    metrics_path: '/health'
+    scrape_interval: 30s
+    scheme: http

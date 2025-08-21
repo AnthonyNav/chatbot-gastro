@@ -1,0 +1,335 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "🏥 GastroChatbot - Medical Monitoring Dashboard",
+    "description": "Comprehensive monitoring for medical chatbot application with HIPAA compliance metrics",
+    "tags": ["gastrochatbot", "medical", "hipaa", "monitoring"],
+    "style": "dark",
+    "timezone": "browser",
+    "refresh": "30s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "🏥 System Overview",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 24, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "up{job=~\"gastro-.*\"}",
+            "legendFormat": "{{job}} - {{instance}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "custom": {"displayMode": "list", "orientation": "horizontal"},
+            "mappings": [
+              {"options": {"0": {"text": "DOWN", "color": "red"}}, "type": "value"},
+              {"options": {"1": {"text": "UP", "color": "green"}}, "type": "value"}
+            ]
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "🔥 API Response Times",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=\"gastro-backend\"}[5m])) by (le, endpoint))",
+            "legendFormat": "95th percentile - {{endpoint}}"
+          },
+          {
+            "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket{job=\"gastro-backend\"}[5m])) by (le, endpoint))",
+            "legendFormat": "50th percentile - {{endpoint}}"
+          }
+        ],
+        "yAxes": [
+          {"label": "Response Time (seconds)", "min": 0}
+        ],
+        "alert": {
+          "conditions": [
+            {
+              "evaluator": {"params": [0.5], "type": "gt"},
+              "operator": {"type": "and"},
+              "query": {"params": ["A", "5m", "now"]},
+              "reducer": {"params": [], "type": "avg"},
+              "type": "query"
+            }
+          ],
+          "executionErrorState": "alerting",
+          "frequency": "10s",
+          "handler": 1,
+          "name": "High API Response Time",
+          "noDataState": "no_data"
+        }
+      },
+      {
+        "id": 3,
+        "title": "🚨 Error Rates",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total{job=\"gastro-backend\",status=~\"5..\"}[5m])) by (endpoint)",
+            "legendFormat": "5xx errors - {{endpoint}}"
+          },
+          {
+            "expr": "sum(rate(http_requests_total{job=\"gastro-backend\",status=~\"4..\"}[5m])) by (endpoint)",
+            "legendFormat": "4xx errors - {{endpoint}}"
+          }
+        ],
+        "yAxes": [
+          {"label": "Errors per second", "min": 0}
+        ],
+        "alert": {
+          "conditions": [
+            {
+              "evaluator": {"params": [0.1], "type": "gt"},
+              "operator": {"type": "and"},
+              "query": {"params": ["A", "5m", "now"]},
+              "reducer": {"params": [], "type": "avg"},
+              "type": "query"
+            }
+          ],
+          "executionErrorState": "alerting",
+          "frequency": "10s",
+          "handler": 1,
+          "name": "High Error Rate",
+          "noDataState": "no_data"
+        }
+      },
+      {
+        "id": 4,
+        "title": "🏥 Medical Chat Activity",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+        "targets": [
+          {
+            "expr": "sum(rate(chat_messages_total[5m]))",
+            "legendFormat": "Messages per second"
+          },
+          {
+            "expr": "sum(chat_active_sessions)",
+            "legendFormat": "Active chat sessions"
+          },
+          {
+            "expr": "sum(rate(emergency_consultations_total[5m]))",
+            "legendFormat": "Emergency consultations"
+          }
+        ],
+        "yAxes": [
+          {"label": "Count", "min": 0}
+        ]
+      },
+      {
+        "id": 5,
+        "title": "🔒 HIPAA Compliance Metrics",
+        "type": "table",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
+        "targets": [
+          {
+            "expr": "audit_log_entries_total",
+            "legendFormat": "Total Audit Entries",
+            "format": "table"
+          },
+          {
+            "expr": "data_encryption_status",
+            "legendFormat": "Encryption Status",
+            "format": "table"
+          },
+          {
+            "expr": "access_control_violations_total",
+            "legendFormat": "Access Violations",
+            "format": "table"
+          },
+          {
+            "expr": "phi_exposure_incidents_total",
+            "legendFormat": "PHI Exposure Incidents",
+            "format": "table"
+          }
+        ],
+        "styles": [
+          {
+            "alias": "Status",
+            "colorMode": "cell",
+            "colors": ["rgba(245, 54, 54, 0.9)", "rgba(237, 129, 40, 0.89)", "rgba(50, 172, 45, 0.97)"],
+            "decimals": 0,
+            "pattern": "/.*/",
+            "thresholds": ["0", "1"],
+            "type": "number",
+            "unit": "short"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "💾 Database Performance",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 20},
+        "targets": [
+          {
+            "expr": "pg_stat_database_tup_fetched{datname=\"gastro_chatbot\"}",
+            "legendFormat": "Tuples fetched"
+          },
+          {
+            "expr": "pg_stat_database_tup_inserted{datname=\"gastro_chatbot\"}",
+            "legendFormat": "Tuples inserted"
+          },
+          {
+            "expr": "pg_stat_database_tup_updated{datname=\"gastro_chatbot\"}",
+            "legendFormat": "Tuples updated"
+          },
+          {
+            "expr": "pg_stat_database_numbackends{datname=\"gastro_chatbot\"}",
+            "legendFormat": "Active connections"
+          }
+        ],
+        "yAxes": [
+          {"label": "Operations", "min": 0}
+        ]
+      },
+      {
+        "id": 7,
+        "title": "🧠 AI Model Performance",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 20},
+        "targets": [
+          {
+            "expr": "ai_model_response_time_seconds",
+            "legendFormat": "AI Response Time"
+          },
+          {
+            "expr": "ai_model_accuracy_score",
+            "legendFormat": "Model Accuracy"
+          },
+          {
+            "expr": "ai_model_confidence_score",
+            "legendFormat": "Model Confidence"
+          },
+          {
+            "expr": "sum(rate(ai_model_requests_total[5m]))",
+            "legendFormat": "AI Requests/sec"
+          }
+        ],
+        "yAxes": [
+          {"label": "Score/Time", "min": 0, "max": 1}
+        ]
+      },
+      {
+        "id": 8,
+        "title": "🚑 Emergency System Status",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 24, "x": 0, "y": 28},
+        "targets": [
+          {
+            "expr": "emergency_system_status",
+            "legendFormat": "Emergency System"
+          },
+          {
+            "expr": "emergency_contacts_available",
+            "legendFormat": "Available Contacts"
+          },
+          {
+            "expr": "sum(rate(emergency_alerts_sent_total[1h]))",
+            "legendFormat": "Alerts Sent (1h)"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "yellow", "value": 0.5},
+                {"color": "green", "value": 1}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 9,
+        "title": "📊 Resource Usage",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 32},
+        "targets": [
+          {
+            "expr": "100 - (avg(irate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
+            "legendFormat": "CPU Usage %"
+          },
+          {
+            "expr": "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100",
+            "legendFormat": "Memory Usage %"
+          },
+          {
+            "expr": "100 - (node_filesystem_avail_bytes{mountpoint=\"/\"} / node_filesystem_size_bytes{mountpoint=\"/\"}) * 100",
+            "legendFormat": "Disk Usage %"
+          }
+        ],
+        "yAxes": [
+          {"label": "Percentage", "min": 0, "max": 100}
+        ],
+        "alert": {
+          "conditions": [
+            {
+              "evaluator": {"params": [80], "type": "gt"},
+              "operator": {"type": "and"},
+              "query": {"params": ["A", "5m", "now"]},
+              "reducer": {"params": [], "type": "avg"},
+              "type": "query"
+            }
+          ],
+          "executionErrorState": "alerting",
+          "frequency": "30s",
+          "handler": 1,
+          "name": "High Resource Usage",
+          "noDataState": "no_data"
+        }
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "environment",
+          "type": "query",
+          "query": "label_values(up, environment)",
+          "refresh": 1,
+          "includeAll": false,
+          "multi": false
+        },
+        {
+          "name": "instance",
+          "type": "query",
+          "query": "label_values(up{environment=\"$environment\"}, instance)",
+          "refresh": 1,
+          "includeAll": true,
+          "multi": true
+        }
+      ]
+    },
+    "annotations": {
+      "list": [
+        {
+          "name": "Deployments",
+          "datasource": "prometheus",
+          "expr": "increase(deployment_timestamp[1m])",
+          "textFormat": "Deployment: {{version}}",
+          "titleFormat": "New Deployment"
+        },
+        {
+          "name": "Emergency Alerts",
+          "datasource": "prometheus", 
+          "expr": "increase(emergency_alerts_sent_total[1m])",
+          "textFormat": "Emergency alert sent",
+          "titleFormat": "🚨 Emergency Alert"
+        }
+      ]
+    }
+  }
+}
