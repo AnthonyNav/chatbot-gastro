@@ -13,12 +13,7 @@ import { securityMiddleware } from './middleware/security';
 import { validateEnvironment } from './utils/validateEnv';
 
 // Importar rutas
-import chatRoutes from './routes/chat';
-import diseaseRoutes from './routes/diseases';
-import symptomRoutes from './routes/symptoms';
-import treatmentRoutes from './routes/treatments';
-import emergencyRoutes from './routes/emergency';
-import feedbackRoutes from './routes/feedback';
+import apiRoutes from './routes';
 
 // Cargar variables de entorno
 dotenv.config();
@@ -130,13 +125,8 @@ app.get('/api/disclaimer', (req, res) => {
   });
 });
 
-// API Routes
-app.use('/api/chat', aiLimiter, chatRoutes);
-app.use('/api/diseases', diseaseRoutes);
-app.use('/api/symptoms', symptomRoutes);
-app.use('/api/treatments', treatmentRoutes);
-app.use('/api/emergency', emergencyRoutes); // Sin rate limiting para emergencias
-app.use('/api/feedback', feedbackRoutes);
+// API Routes - Usar el router consolidado
+app.use('/api', apiRoutes);
 
 // Catch all para rutas no encontradas
 app.use('*', (req, res) => {

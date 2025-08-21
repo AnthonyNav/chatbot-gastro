@@ -6,6 +6,253 @@ import { createMedicalError } from '../middleware/errorHandler';
 
 export class DiseaseController {
   /**
+   * Busca enfermedades basadas en síntomas
+   */
+  public async searchBySymptoms(req: Request, res: Response): Promise<void> {
+    try {
+      const {
+        symptoms,
+        patientAge,
+        patientGender,
+        painLevel,
+        duration,
+        location,
+        includeRareConditions = false,
+        emergencyMode = false,
+      } = req.body;
+
+      logger.info('Searching diseases by symptoms:', {
+        symptomsCount: symptoms?.length,
+        patientAge,
+        emergencyMode,
+        sessionId: req.headers['x-session-id'],
+      });
+
+      // Buscar enfermedades por síntomas usando el servicio de base de datos
+      const searchResults = await dbService.searchDiseasesBySymptoms({
+        symptoms,
+        patientAge,
+        patientGender,
+        painLevel,
+        duration,
+        location,
+        includeRareConditions,
+        emergencyMode,
+      });
+
+      // Calcular scores de coincidencia
+      const diseasesWithScores = searchResults.map((disease: any) => ({
+        ...disease,
+        matchScore: this.calculateSymptomMatchScore(symptoms, disease.symptoms),
+        urgencyLevel: this.determineUrgencyLevel(disease, symptoms, painLevel),
+        recommendedAction: this.getRecommendedAction(disease, emergencyMode),
+      }));
+
+      // Ordenar por score de coincidencia y urgencia
+      diseasesWithScores.sort((a, b) => {
+        if (a.urgencyLevel !== b.urgencyLevel) {
+          const urgencyOrder = { 'immediate': 4, 'urgent': 3, 'moderate': 2, 'low': 1 };
+          return urgencyOrder[b.urgencyLevel as keyof typeof urgencyOrder] - 
+                 urgencyOrder[a.urgencyLevel as keyof typeof urgencyOrder];
+        }
+        return b.matchScore - a.matchScore;
+      });
+
+      res.status(200).json({
+        success: true,
+        data: {
+          diseases: diseasesWithScores.slice(0, 10), // Top 10 resultados
+          searchCriteria: {
+            symptoms,
+            patientAge,
+            painLevel,
+            duration,
+            emergencyMode,
+          },
+          disclaimer: 'Esta búsqueda es solo informativa. Consulte a un profesional médico para diagnóstico.',
+          emergencyWarning: emergencyMode ? 
+            'Se detectaron síntomas que podrían requerir atención médica inmediata.' : null,
+        },
+        timestamp: new Date().toISOString(),
+      });
+
+    } catch (error) {
+      logger.error('Error searching diseases by symptoms:', error);
+      throw createMedicalError(
+        'DATABASE_ERROR',
+        'Error al buscar enfermedades por síntomas'
+      );
+    }
+  }
+
+  /**
+   * Obtiene detalles específicos de una enfermedad
+   */
+  public async getDiseaseDetails(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const {
+        includeSymptoms = true,
+        includeTreatments = true,
+        includeStatistics = false,
+      } = req.query;
+
+      logger.info('Getting disease details:', {
+        diseaseId: id,
+        includeSymptoms,
+        includeTreatments,
+        sessionId: req.headers['x-session-id'],
+      });
+
+      const disease = await dbService.getDiseaseById(id, {
+        includeSymptoms: includeSymptoms === 'true',
+        includeTreatments: includeTreatments === 'true',
+        includeStatistics: includeStatistics === 'true',
+      });
+
+      if (!disease) {
+        return res.status(404).json({
+          success: false,
+          error: {
+            message: 'Disease not found',
+            userMessage: 'La enfermedad solicitada no fue encontrada.',
+          },
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      res.status(200).json({
+        success: true,
+        data: {
+          disease,
+          lastUpdated: disease.updatedAt,
+          disclaimer: 'Esta información es educativa. Consulte con un profesional médico.',
+        },
+        timestamp: new Date().toISOString(),
+      });
+
+    } catch (error) {
+      logger.error('Error getting disease details:', error);
+      throw createMedicalError(
+        'DATABASE_ERROR',
+        'Error al obtener detalles de la enfermedad'
+      );
+    }
+  }
+
+  /**
+   * Obtiene enfermedades por categoría
+   */
+  public async getDiseasesByCategory(req: Request, res: Response): Promise<void> {
+    try {
+      const { category } = req.params;
+      const {
+        limit = 20,
+        offset = 0,
+        sortBy = 'name',
+        sortOrder = 'asc',
+      } = req.query;
+
+      logger.info('Getting diseases by category:', {
+        category,
+        limit,
+        offset,
+        sortBy,
+        sessionId: req.headers['x-session-id'],
+      });
+
+      const limitNum = Math.min(Number(limit), 50);
+      const offsetNum = Math.max(Number(offset), 0);
+
+      const diseases = await dbService.getDiseasesByCategory(category, {
+        limit: limitNum,
+        offset: offsetNum,
+        sortBy: sortBy as string,
+        sortOrder: sortOrder as 'asc' | 'desc',
+      });
+
+      const totalCount = await dbService.getDiseaseCountByCategory(category);
+
+      res.status(200).json({
+        success: true,
+        data: {
+          diseases,
+          pagination: {
+            total: totalCount,
+            limit: limitNum,
+            offset: offsetNum,
+            hasMore: offsetNum + limitNum < totalCount,
+          },
+          category: {
+            name: category,
+            description: this.getCategoryDescription(category),
+          },
+        },
+        timestamp: new Date().toISOString(),
+      });
+
+    } catch (error) {
+      logger.error('Error getting diseases by category:', error);
+      throw createMedicalError(
+        'DATABASE_ERROR',
+        'Error al obtener enfermedades por categoría'
+      );
+    }
+  }
+
+  /**
+   * Busca enfermedades por texto libre
+   */
+  public async searchDiseases(req: Request, res: Response): Promise<void> {
+    try {
+      const {
+        q,
+        category,
+        severity,
+        limit = 20,
+        includeSymptoms = false,
+      } = req.query;
+
+      logger.info('Searching diseases by text:', {
+        query: q,
+        category,
+        severity,
+        sessionId: req.headers['x-session-id'],
+      });
+
+      const limitNum = Math.min(Number(limit), 50);
+
+      const searchResults = await dbService.searchDiseases({
+        query: q as string,
+        category: category as string,
+        severity: severity as string,
+        limit: limitNum,
+        includeSymptoms: includeSymptoms === 'true',
+      });
+
+      res.status(200).json({
+        success: true,
+        data: {
+          diseases: searchResults,
+          searchQuery: q,
+          appliedFilters: {
+            category: category || null,
+            severity: severity || null,
+          },
+          disclaimer: 'Esta búsqueda es solo informativa. Consulte a un profesional médico.',
+        },
+        timestamp: new Date().toISOString(),
+      });
+
+    } catch (error) {
+      logger.error('Error searching diseases:', error);
+      throw createMedicalError(
+        'DATABASE_ERROR',
+        'Error al buscar enfermedades'
+      );
+    }
+  }
+  /**
    * Obtiene lista de enfermedades con filtros y paginación
    */
   public async getDiseases(req: Request, res: Response): Promise<void> {
@@ -503,19 +750,107 @@ export class DiseaseController {
   }
 
   /**
+   * Calcula el score de coincidencia entre síntomas
+   */
+  private calculateSymptomMatchScore(patientSymptoms: string[], diseaseSymptoms: any[]): number {
+    if (!patientSymptoms || !diseaseSymptoms || diseaseSymptoms.length === 0) {
+      return 0;
+    }
+
+    const normalizedPatientSymptoms = patientSymptoms.map(s => s.toLowerCase().trim());
+    const normalizedDiseaseSymptoms = diseaseSymptoms.map(s => 
+      (s.symptom?.name || s.name || s).toLowerCase().trim()
+    );
+
+    const matches = normalizedPatientSymptoms.filter(patientSymptom =>
+      normalizedDiseaseSymptoms.some(diseaseSymptom =>
+        diseaseSymptom.includes(patientSymptom) || patientSymptom.includes(diseaseSymptom)
+      )
+    );
+
+    return Math.round((matches.length / normalizedPatientSymptoms.length) * 100);
+  }
+
+  /**
+   * Determina el nivel de urgencia basado en la enfermedad y síntomas
+   */
+  private determineUrgencyLevel(disease: any, symptoms: string[], painLevel?: number): string {
+    // Síntomas de emergencia inmediata
+    const emergencySymptoms = [
+      'dolor de pecho severo', 'dificultad para respirar', 'convulsiones',
+      'pérdida de consciencia', 'sangrado abundante', 'vómito con sangre',
+      'dolor abdominal severo', 'fiebre muy alta'
+    ];
+
+    const hasEmergencySymptom = symptoms.some(symptom =>
+      emergencySymptoms.some(emergency =>
+        symptom.toLowerCase().includes(emergency.toLowerCase())
+      )
+    );
+
+    if (hasEmergencySymptom || (painLevel && painLevel >= 8)) {
+      return 'immediate';
+    }
+
+    if (disease.severityLevel === 'severe' || disease.category === 'emergency') {
+      return 'urgent';
+    }
+
+    if (disease.severityLevel === 'moderate' || (painLevel && painLevel >= 6)) {
+      return 'moderate';
+    }
+
+    return 'low';
+  }
+
+  /**
+   * Obtiene la acción recomendada basada en la enfermedad
+   */
+  private getRecommendedAction(disease: any, emergencyMode: boolean): string {
+    if (emergencyMode || disease.category === 'emergency') {
+      return 'Busque atención médica inmediata. Llame al 911 si es necesario.';
+    }
+
+    switch (disease.severityLevel) {
+      case 'severe':
+        return 'Consulte con un médico urgentemente en las próximas 4-6 horas.';
+      case 'moderate':
+        return 'Programe una cita médica en los próximos 1-2 días.';
+      case 'mild':
+        return 'Monitoree síntomas y consulte si persisten o empeoran.';
+      default:
+        return 'Consulte con un profesional médico para evaluación adecuada.';
+    }
+  }
+
+  /**
    * Obtiene descripción de categoría
    */
   private getCategoryDescription(category: string): string {
     const descriptions: { [key: string]: string } = {
+      'digestive': 'Enfermedades del sistema digestivo',
       'gastrointestinal': 'Enfermedades del sistema digestivo',
       'inflammatory': 'Condiciones inflamatorias del tracto digestivo',
       'infectious': 'Infecciones gastrointestinales',
       'functional': 'Trastornos funcionales digestivos',
       'autoimmune': 'Enfermedades autoinmunes del sistema digestivo',
       'neoplastic': 'Tumores y cánceres gastrointestinales',
+      'respiratory': 'Enfermedades del sistema respiratorio',
+      'cardiovascular': 'Enfermedades del sistema cardiovascular',
+      'neurological': 'Enfermedades del sistema nervioso',
+      'endocrine': 'Enfermedades del sistema endocrino',
+      'musculoskeletal': 'Enfermedades del sistema musculoesquelético',
+      'dermatological': 'Enfermedades de la piel',
+      'psychiatric': 'Trastornos de salud mental',
+      'reproductive': 'Enfermedades del sistema reproductivo',
+      'urological': 'Enfermedades del sistema urinario',
+      'oncological': 'Enfermedades oncológicas',
+      'immunological': 'Enfermedades del sistema inmunológico',
+      'genetic': 'Enfermedades genéticas',
+      'emergency': 'Condiciones de emergencia médica',
     };
 
-    return descriptions[category] || 'Categoría de enfermedades gastrointestinales';
+    return descriptions[category] || 'Categoría de enfermedades médicas';
   }
 }
 
