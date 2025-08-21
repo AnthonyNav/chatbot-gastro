@@ -1,0 +1,334 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Fuentes personalizadas */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* Variables CSS para temas */
+:root {
+  --color-primary: 59 130 246; /* blue-500 */
+  --color-primary-dark: 37 99 235; /* blue-600 */
+  --color-secondary: 156 163 175; /* gray-400 */
+  --color-success: 34 197 94; /* green-500 */
+  --color-warning: 245 158 11; /* amber-500 */
+  --color-error: 239 68 68; /* red-500 */
+  --color-emergency: 220 38 38; /* red-600 */
+}
+
+/* Tema oscuro */
+.dark {
+  --color-primary: 96 165 250; /* blue-400 */
+  --color-primary-dark: 59 130 246; /* blue-500 */
+}
+
+/* Alto contraste */
+.high-contrast {
+  --color-primary: 0 0 0; /* black */
+  --color-secondary: 75 85 99; /* gray-600 */
+}
+
+/* Estilos base */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Componentes personalizados */
+@layer components {
+  /* Botón de emergencia */
+  .btn-emergency {
+    @apply bg-red-600 text-white hover:bg-red-700 focus:ring-red-500;
+    animation: pulse-emergency 2s infinite;
+  }
+
+  /* Tarjetas médicas */
+  .medical-card {
+    @apply bg-white rounded-lg border border-gray-200 shadow-sm p-6;
+    @apply hover:shadow-md transition-shadow duration-200;
+  }
+
+  .medical-card.emergency {
+    @apply border-red-300 bg-red-50;
+  }
+
+  /* Indicadores de severidad */
+  .severity-low {
+    @apply text-green-600 bg-green-50 border-green-200;
+  }
+
+  .severity-medium {
+    @apply text-yellow-600 bg-yellow-50 border-yellow-200;
+  }
+
+  .severity-high {
+    @apply text-orange-600 bg-orange-50 border-orange-200;
+  }
+
+  .severity-critical {
+    @apply text-red-600 bg-red-50 border-red-200;
+  }
+
+  /* Chat bubbles */
+  .chat-bubble-user {
+    @apply bg-blue-600 text-white rounded-lg px-4 py-2 max-w-xs ml-auto;
+  }
+
+  .chat-bubble-bot {
+    @apply bg-gray-100 text-gray-900 rounded-lg px-4 py-2 max-w-xs;
+  }
+
+  .chat-bubble-emergency {
+    @apply bg-red-50 border border-red-200 text-red-900 rounded-lg px-4 py-2 max-w-xs;
+  }
+
+  /* Loading states */
+  .loading-skeleton {
+    @apply animate-pulse bg-gray-300 rounded;
+  }
+
+  /* Notificaciones */
+  .notification {
+    @apply fixed top-4 right-4 p-4 rounded-lg shadow-lg border z-50;
+    @apply transform transition-all duration-300 ease-in-out;
+  }
+
+  .notification.success {
+    @apply bg-green-50 border-green-200 text-green-800;
+  }
+
+  .notification.error {
+    @apply bg-red-50 border-red-200 text-red-800;
+  }
+
+  .notification.warning {
+    @apply bg-yellow-50 border-yellow-200 text-yellow-800;
+  }
+
+  .notification.info {
+    @apply bg-blue-50 border-blue-200 text-blue-800;
+  }
+
+  .notification.emergency {
+    @apply bg-red-600 text-white border-red-700;
+    animation: pulse-emergency 1s infinite;
+  }
+
+  /* Formularios médicos */
+  .form-input {
+    @apply w-full px-3 py-2 border border-gray-300 rounded-lg;
+    @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent;
+    @apply disabled:bg-gray-100 disabled:cursor-not-allowed;
+  }
+
+  .form-label {
+    @apply block text-sm font-medium text-gray-700 mb-2;
+  }
+
+  .form-error {
+    @apply text-red-600 text-sm mt-1;
+  }
+
+  /* Sidebar */
+  .sidebar {
+    @apply fixed left-0 top-0 h-full w-64 bg-white border-r border-gray-200 shadow-lg;
+    @apply transform transition-transform duration-300 ease-in-out;
+    @apply lg:translate-x-0 z-40;
+  }
+
+  .sidebar.closed {
+    @apply -translate-x-full lg:translate-x-0;
+  }
+
+  /* Responsividad médica */
+  .medical-grid {
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6;
+  }
+
+  .medical-grid.emergency {
+    @apply grid-cols-1 md:grid-cols-2 gap-4;
+  }
+
+  /* Accesibilidad */
+  .sr-only {
+    @apply absolute w-px h-px p-0 -m-px overflow-hidden whitespace-nowrap border-0;
+    clip: rect(0, 0, 0, 0);
+  }
+
+  /* Focus visible */
+  .focus-visible:focus-visible {
+    @apply outline-none ring-2 ring-blue-500 ring-offset-2;
+  }
+}
+
+/* Utilidades personalizadas */
+@layer utilities {
+  /* Truncate con número de líneas */
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* Animaciones médicas */
+  .animate-heartbeat {
+    animation: heartbeat 2s infinite;
+  }
+
+  .animate-emergency-pulse {
+    animation: pulse-emergency 1s infinite;
+  }
+
+  /* Scrollbar personalizado */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    @apply bg-gray-100;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 rounded-full;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-400;
+  }
+}
+
+/* Animaciones personalizadas */
+@keyframes pulse-emergency {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes heartbeat {
+  0%, 100% {
+    transform: scale(1);
+  }
+  14% {
+    transform: scale(1.1);
+  }
+  28% {
+    transform: scale(1);
+  }
+  42% {
+    transform: scale(1.1);
+  }
+  70% {
+    transform: scale(1);
+  }
+}
+
+/* Animación de typing indicator */
+@keyframes typing {
+  0%, 60%, 100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-10px);
+  }
+}
+
+.typing-indicator {
+  animation: typing 1.4s infinite ease-in-out;
+}
+
+.typing-indicator:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-indicator:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+/* Modo sin conexión */
+.offline-mode {
+  @apply bg-gray-100;
+}
+
+.offline-mode .medical-card {
+  @apply bg-gray-50 border-gray-300;
+}
+
+/* Modo de emergencia global */
+.emergency-mode {
+  @apply bg-red-50;
+}
+
+.emergency-mode .medical-card {
+  @apply border-red-200;
+}
+
+.emergency-mode .btn-primary {
+  @apply bg-red-600 hover:bg-red-700 focus:ring-red-500;
+}
+
+/* Estilos de impresión */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  .medical-card {
+    @apply shadow-none border border-gray-400;
+  }
+
+  .btn-emergency {
+    @apply bg-white text-black border border-black;
+  }
+}
+
+/* Reducir movimiento para usuarios con preferencias de accesibilidad */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Alto contraste para accesibilidad */
+@media (prefers-contrast: high) {
+  .medical-card {
+    @apply border-2 border-black;
+  }
+
+  .btn-primary {
+    @apply bg-black text-white border-2 border-black;
+  }
+
+  .btn-secondary {
+    @apply bg-white text-black border-2 border-black;
+  }
+}
