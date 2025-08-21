@@ -11,9 +11,9 @@ const envSchema = z.object({
   PORT: z.string().transform(Number).pipe(z.number().min(1).max(65535)).default('5000'),
   API_VERSION: z.string().default('v1'),
   
-  // OpenAI
-  OPENAI_API_KEY: z.string().min(1, 'OPENAI_API_KEY es requerida para funcionalidad de IA'),
-  OPENAI_MODEL: z.string().default('gpt-4'),
+  // Google Gemini
+  GEMINI_API_KEY: z.string().min(1, 'GEMINI_API_KEY es requerida para funcionalidad de IA'),
+  GEMINI_MODEL: z.string().default('gemini-pro'),
   
   // Seguridad
   JWT_SECRET: z.string().min(32, 'JWT_SECRET debe tener al menos 32 caracteres'),
@@ -64,7 +64,7 @@ export function validateEnvironment(): Environment {
     logger.info('✅ Variables de entorno validadas correctamente');
     logger.info(`🔧 Modo: ${env.NODE_ENV}`);
     logger.info(`🚀 Puerto: ${env.PORT}`);
-    logger.info(`🧠 Modelo IA: ${env.OPENAI_MODEL}`);
+    logger.info(`🧠 Modelo IA: ${env.GEMINI_MODEL}`);
     logger.info(`⏱️  Rate limit: ${env.RATE_LIMIT_MAX_REQUESTS} req/${env.RATE_LIMIT_WINDOW_MS}ms`);
     
     return env;
@@ -112,8 +112,8 @@ function validateMedicalSafetyRequirements(env: Environment): void {
       errors.push('❌ CRÍTICO: Usando secretos por defecto en producción');
     }
     
-    if (env.OPENAI_API_KEY.includes('your_openai_api_key')) {
-      errors.push('❌ CRÍTICO: API key de OpenAI no configurada correctamente');
+    if (env.GEMINI_API_KEY.includes('your_gemini_api_key')) {
+      errors.push('❌ CRÍTICO: API key de Gemini no configurada correctamente');
     }
   }
   

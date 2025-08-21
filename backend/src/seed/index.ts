@@ -20,7 +20,7 @@ async function main() {
     logger.info('✅ Conexión a base de datos establecida');
 
     // 2. Limpiar datos existentes (solo en desarrollo)
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env['NODE_ENV'] === 'development') {
       logger.info('🧹 Limpiando datos existentes...');
       await cleanDatabase();
       logger.info('✅ Base de datos limpiada');
@@ -47,7 +47,7 @@ async function main() {
     logger.info(`✅ ${relations.length} relaciones creadas`);
 
     // 7. Datos de prueba para desarrollo
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env['NODE_ENV'] === 'development') {
       logger.info('🧪 Creando datos de prueba...');
       await seedTestData(prisma);
       logger.info('✅ Datos de prueba creados');
@@ -77,10 +77,9 @@ async function main() {
 async function cleanDatabase() {
   try {
     // Eliminar en orden correcto respetando foreign keys
-    await prisma.diseaseSymptomRel.deleteMany();
-    await prisma.conversationMessage.deleteMany();
-    await prisma.conversation.deleteMany();
+    await prisma.diseaseSymptom.deleteMany();
     await prisma.feedback.deleteMany();
+    await prisma.conversation.deleteMany();
     await prisma.activityLog.deleteMany();
     await prisma.emergencyInfo.deleteMany();
     await prisma.treatment.deleteMany();
@@ -103,7 +102,7 @@ async function verifyDataIntegrity() {
     const symptomsCount = await prisma.symptom.count();
     const diseasesCount = await prisma.disease.count();
     const treatmentsCount = await prisma.treatment.count();
-    const relationsCount = await prisma.diseaseSymptomRel.count();
+    const relationsCount = await prisma.diseaseSymptom.count();
 
     if (symptomsCount === 0) throw new Error('No se crearon síntomas');
     if (diseasesCount === 0) throw new Error('No se crearon enfermedades');
@@ -149,7 +148,7 @@ async function showStatistics() {
       symptoms: await prisma.symptom.count(),
       diseases: await prisma.disease.count(),
       treatments: await prisma.treatment.count(),
-      relations: await prisma.diseaseSymptomRel.count(),
+      relations: await prisma.diseaseSymptom.count(),
     };
 
     const diseasesByCategory = await prisma.disease.groupBy({
